@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -13,6 +14,23 @@ import (
 func StructToMapWithJson(obj interface{}) (ret map[string]interface{}) {
 	objByte, _ := json.Marshal(obj)
 	_ = json.Unmarshal(objByte, &ret)
+	return
+}
+
+func StructAddToMap(obj interface{}, dst map[string]interface{}) (err error) {
+	// 获取结构体类型
+	v := reflect.ValueOf(obj)
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		zero := reflect.Zero(fieldType.Type)
+		if !reflect.DeepEqual(field.Interface(), zero.Interface()) {
+			dst[fieldType.Name] = field.Interface()
+		}
+	}
 	return
 }
 

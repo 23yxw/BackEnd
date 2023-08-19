@@ -1,8 +1,9 @@
 package mysql
 
 import (
-	// "bookingBackEnd/model"
+	"bookingBackEnd/model"
 	"bookingBackEnd/utils"
+	"fmt"
 	"sync"
 )
 
@@ -21,4 +22,46 @@ func NewUserTable() (*UserTable, error) {
 		}
 	})
 	return UserTableInstance, nil
+}
+
+func (tb *UserTable) InsertUser(userInfo model.UserInfo) (err error) {
+	sqlStr := fmt.Sprintf(`
+				INSERT %s
+				(third_session, email, password)
+				VALUES(:third_session, :email, :password)
+			`, tb.tableName)
+	_, err = DB.NamedExec(sqlStr, &userInfo)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+	}
+	return
+}
+
+// GetThirdSession
+func (tb *UserTable) GetThirdSession(email string, password string) (ret []model.ThirdSessionInfo, err error) {
+	sqlStr := fmt.Sprintf(`
+				SELECT third_session, user_type
+				FROM %s 
+				WHERE email = ? and password = ?;
+				`, tb.tableName)
+
+	err = DB.Select(&ret, sqlStr, email, password)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+	}
+	return
+}
+
+func (tb *UserTable) GetUserIdBythirdsession(third_session string) (ret int, err error) {
+	sqlStr := fmt.Sprintf(`
+				SELECT id
+				FROM %s
+				WHERE third_session = ?;
+				`, tb.tableName)
+	err = DB.Get(&ret, sqlStr, third_session)
+	if err != nil {
+		utils.ErrorLogger.Errorf("Error is :%v", err)
+		return
+	}
+	return
 }

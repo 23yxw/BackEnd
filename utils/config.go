@@ -34,9 +34,12 @@ type RouterParams struct {
 }
 
 type AppParams struct {
-	StartTime       float32
-	EndTime         float32
-	MinTimeInterval float32
+	StartTime                 float32
+	EndTime                   float32
+	MinTimeInterval           float32
+	ImageDir                  string
+	ClassroomListLimitNumber  int
+	ClassroomImageLimitNumber int
 }
 
 type DBTableParams struct {
