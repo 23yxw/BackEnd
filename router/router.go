@@ -19,18 +19,15 @@ func NewRouter() *gin.Engine {
 		// 用户注册或登录
 		user.POST("/login", controller.Login)
 		user.POST("/register", controller.Register)
-		// user.GET("/history")
-		// user.POST("/preference")
+		user.POST("/updatePreference", controller.UpsertUserPreference)
 	}
 
 	classroom := router.Group("/classroom")
 	{
 		// 获取所有教室信息
 		classroom.GET("/list", controller.GetClassroomList)
-		// 获取所有教室信息，包括二进制图像内容
-		// classroom.GET("/detailedList", controller.GetDetailedClassroomList)
-		// 	// 获取单个教室详细信息，包括可预约时间段
-		// classroom.GET("/info")
+		// 获取所有教室信息，包括图像数据
+		classroom.GET("/detailedList", controller.GetDetailedClassroomList)
 		// 	// 获取某个教室的统计特征
 		// 	classroom.GET("/statics")
 		classroom.POST("/insert", controller.UploadClassroomInfo)
@@ -38,12 +35,15 @@ func NewRouter() *gin.Engine {
 		classroom.DELETE("/delete", controller.DeleteClassroom)
 	}
 
-	// booking := router.Group("/booking")
-	// {
-	// 	booking.POST("/insert")
-	// 	booking.POST("/update")
-	// 	booking.DELETE("/delete")
-	// }
+	booking := router.Group("/booking")
+	{
+		booking.POST("/insert", controller.BookingClassroom)
+		booking.DELETE("/delete", controller.DeleteBooking)
+		booking.GET("/history", controller.GetBookingList)
+		// 根据条件获取教室信息，包括可预约时间段
+		booking.GET("/info", controller.FilterClassroomAndBookingPeriod)
+		booking.GET("/preferenceInfo", controller.GetPreferenceClassroomAndBookingPeriod)
+	}
 
 	return router
 }

@@ -2,10 +2,10 @@ package model
 
 type BaseInfo struct {
 	Location string `db:"location" json:"location"`
-	Floor    string `db:"floor" json:"floor"`
-	RoomName string `db:"room_name" json:"room_name"`
-	Capacity string `db:"capacity" json:"capacity"`
-	Power    string `db:"power" json:"power"`
+	Floor    int    `db:"floor" json:"floor"`
+	RoomName string `db:"roomName" json:"roomName"`
+	Capacity int    `db:"capacity" json:"capacity"`
+	Power    int    `db:"power" json:"power"`
 }
 
 type UploadClassroomInfo struct {
@@ -14,16 +14,21 @@ type UploadClassroomInfo struct {
 }
 
 type UpdateClassroomInfo struct {
-	Id string `db:"id" json:"id"`
+	Id int `db:"id" json:"id"`
 	UploadClassroomInfo
 }
 
 type ClassroomInfo struct {
-	Id string `db:"id" json:"id"`
+	Id int `db:"id" json:"id"`
 	BaseInfo
 }
 
 type DetailedClassroomInfo struct {
-	Id string `db:"id" json:"id"`
+	Photo string `db:"photo" json:"photo"`
 	ClassroomInfo
+}
+
+type ClassroomPowerStatics struct {
+	PowerCount   int `db:"powerCount" json:"powerCount"`
+	NoPowerCount int `db:"noPowerCount" json:"noPowerCount"`
 }

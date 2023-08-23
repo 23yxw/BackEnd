@@ -4,6 +4,8 @@ import (
 	"bookingBackEnd/model"
 	"bookingBackEnd/utils"
 	"fmt"
+
+	// "strings"
 	"sync"
 )
 
@@ -27,8 +29,8 @@ func NewClassroomTable() (*ClassroomTable, error) {
 func (tb *ClassroomTable) InsertClassroomInfo(info model.UploadClassroomInfo) (err error) {
 	sqlStr := fmt.Sprintf(`
 				INSERT %s
-				(location, floor, room_name, capacity, power, photo)
-				VALUES(:location, :floor, :room_name, :capacity, :power, :photo)
+				(location, floor, roomName, capacity, power, photo)
+				VALUES(:location, :floor, :roomName, :capacity, :power, :photo)
 			`, tb.tableName)
 	_, err = DB.NamedExec(sqlStr, &info)
 	if err != nil {
@@ -37,9 +39,9 @@ func (tb *ClassroomTable) InsertClassroomInfo(info model.UploadClassroomInfo) (e
 	return
 }
 
-func (tb *ClassroomTable) GetClassroomInfoById(classroomId string) (ret model.UpdateClassroomInfo, err error) {
+func (tb *ClassroomTable) GetClassroomInfoById(classroomId int) (ret model.UpdateClassroomInfo, err error) {
 	sqlStr := fmt.Sprintf(`
-				SELECT id, location, floor, room_name, capacity, power, photo
+				SELECT id, location, floor, roomName, capacity, power, photo
 				FROM %s
 				WHERE id = ?;
 				`, tb.tableName)
@@ -51,27 +53,39 @@ func (tb *ClassroomTable) GetClassroomInfoById(classroomId string) (ret model.Up
 	return
 }
 
-func (tb *ClassroomTable) GetClassroomList(classroomList *[]model.ClassroomInfo) (err error) {
-	sqlStr := fmt.Sprintf(`SELECT id, location, floor, room_name, capacity, power
+func (tb *ClassroomTable) GetClassroomList(classroomList *[]model.ClassroomInfo, pageNum int) (err error) {
+	sqlStr := fmt.Sprintf(`SELECT id, location, floor, roomName, capacity, power
 	FROM %s
 	ORDER BY id
-	LIMIT ?;
+	LIMIT ?, ?;
 	`, tb.tableName)
-	err = DB.Select(classroomList, sqlStr, utils.ParamsInstance.ClassroomListLimitNumber)
+	limitCount := utils.ParamsInstance.ClassroomListLimitNumber
+	limitOffset := utils.ParamsInstance.ClassroomListLimitNumber * pageNum
+	err = DB.Select(classroomList, sqlStr, limitOffset, limitCount)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+		return
+	}
 	return
 }
 
-func (tb *ClassroomTable) GetDetailedClassroomList(detailedClassroomList *[]model.DetailedClassroomInfo) (err error) {
-	sqlStr := fmt.Sprintf(`SELECT id, location, floor, room_name, capacity, power, photo
+func (tb *ClassroomTable) GetDetailedClassroomList(detailedClassroomList *[]model.DetailedClassroomInfo, pageNum int) (err error) {
+	sqlStr := fmt.Sprintf(`SELECT id, location, floor, roomName, capacity, power, photo
 	FROM %s
 	ORDER BY id
-	LIMIT ?;
+	LIMIT ?, ?;
 	`, tb.tableName)
-	err = DB.Select(detailedClassroomList, sqlStr, utils.ParamsInstance.ClassroomImageLimitNumber)
+	limitCount := utils.ParamsInstance.ClassroomImageLimitNumber
+	limitOffset := utils.ParamsInstance.ClassroomImageLimitNumber * pageNum
+	err = DB.Select(detailedClassroomList, sqlStr, limitOffset, limitCount)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+		return
+	}
 	return
 }
 
-func (tb *ClassroomTable) DeleteClassroomById(classroomId string) (photoUrl string, err error) {
+func (tb *ClassroomTable) DeleteClassroomById(classroomId int) (photoUrl string, err error) {
 	sqlStr := fmt.Sprintf(`
 				SELECT photo 
 				FROM %s
@@ -98,21 +112,51 @@ func (tb *ClassroomTable) DeleteClassroomById(classroomId string) (photoUrl stri
 
 func (tb *ClassroomTable) UpdateClassroomInfoById(info map[string]interface{}) (err error) {
 	sqlStr := fmt.Sprintf(`UPDATE %s SET `, tb.tableName)
-	i := 2
+	i := 1
 	for key := range info {
 		if key != "id" {
 			sqlStr += (key + "=:" + key)
-		}
-		if i < len(info) {
-			sqlStr += ","
+			if i < len(info) {
+				sqlStr += ","
+			}
 		}
 		i += 1
 	}
 	sqlStr += " WHERE id = :id"
-
+	utils.ErrorLogger.Info(sqlStr)
 	_, err = DB.NamedExec(sqlStr, info)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error is:%v", err)
+		return
+	}
+	return
+}
+
+func (tb *ClassroomTable) FilterClassroomId(floor int, capacity int, power int) (ret []model.ClassroomInfo, err error) {
+	sqlStr := fmt.Sprintf(`SELECT id, location, floor, roomName, capacity, power
+	FROM %s
+	WHERE floor = ?
+	AND capacity >= ?
+	AND power = ?;
+	`, tb.tableName)
+	err = DB.Select(&ret, sqlStr, floor, capacity, power)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+		return
+	}
+	return
+}
+
+func (tb *ClassroomTable) GetClassroomPowerStatics() (ret model.ClassroomPowerStatics, err error) {
+	sqlStr := fmt.Sprintf(`SELECT 
+				SUM(CASE WHEN power = 1 THEN 1 ELSE 0 END) AS powerCount,
+				SUM(CASE WHEN power = 0 THEN 1 ELSE 0 END) AS noPowerCount
+				FROM %s;
+	`, tb.tableName)
+	err = DB.Get(&ret, sqlStr)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error is:%v", err)
+		return
 	}
 	return
 }

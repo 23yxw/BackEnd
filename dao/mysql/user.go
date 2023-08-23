@@ -52,9 +52,9 @@ func (tb *UserTable) GetThirdSession(email string, password string) (ret []model
 	return
 }
 
-func (tb *UserTable) GetUserIdBythirdsession(third_session string) (ret int, err error) {
+func (tb *UserTable) GetUserIdBythirdsession(third_session string) (ret model.UserIdInfo, err error) {
 	sqlStr := fmt.Sprintf(`
-				SELECT id
+				SELECT id, user_type
 				FROM %s
 				WHERE third_session = ?;
 				`, tb.tableName)

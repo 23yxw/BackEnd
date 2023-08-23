@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,10 +27,21 @@ func StructAddToMap(obj interface{}, dst map[string]interface{}) (err error) {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
+		firstChar := strings.ToLower(string(fieldType.Name[0]))
+		fieldName := firstChar + fieldType.Name[1:]
+
 		zero := reflect.Zero(fieldType.Type)
 		if !reflect.DeepEqual(field.Interface(), zero.Interface()) {
-			dst[fieldType.Name] = field.Interface()
+			dst[fieldName] = field.Interface()
 		}
+	}
+	return
+}
+
+// StructArrayToMapWithJson 使用json的marshal和unmarshal将struct array转化为map
+func StructArrayToMapWithJson(obj []interface{}) (ret []map[string]interface{}) {
+	for k, objV := range obj {
+		ret[k] = StructToMapWithJson(objV)
 	}
 	return
 }
