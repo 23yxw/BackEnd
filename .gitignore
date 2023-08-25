@@ -3,6 +3,5 @@ conf/**
 log/
 bin/**
 .vscode/
-**_test.go
 router/logs/
 logs/

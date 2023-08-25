@@ -24,6 +24,7 @@ func InsertBookingInfo(thirdSession string, classroomId int, date string, startT
 	bookingInfo.StartTime = startTime
 	bookingInfo.EndTime = endTime
 
+	// 插入预约记录时判断是否有冲突
 	isConflict, err = mysql.BookingTableInstance.ValidateBooking(bookingInfo)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)

@@ -151,14 +151,6 @@ func FilterClassroomForBooking(c *gin.Context) {
 		return
 	}
 
-	// var j BookingFilterJson
-	// if err := c.MustBindWith(&j, binding.JSON); err != nil {
-	// 	utils.ErrorLogger.Errorf("error is: %v", err)
-	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
-	// 	c.JSON(http.StatusOK, ret)
-	// 	return
-	// }
-
 	_, err := mysql.UserTableInstance.GetUserIdBythirdsession(q.ThirdSessionId)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
@@ -182,14 +174,6 @@ func FilterClassroomForBooking(c *gin.Context) {
 		c.JSON(http.StatusOK, ret)
 		return
 	}
-
-	// results, err := services.FilterClassroomAndTimeSegments(filterClassroomInfo, j.Date)
-	// if err != nil {
-	// 	utils.ErrorLogger.Errorf("error:%v", err)
-	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get desired classroom and time segments", "")
-	// 	c.JSON(http.StatusOK, ret)
-	// 	return
-	// }
 
 	ret := utils.JsonResponse(0, results, "", "")
 	c.JSON(http.StatusOK, ret)

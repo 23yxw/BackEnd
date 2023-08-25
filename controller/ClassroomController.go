@@ -72,14 +72,6 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 
-	// err = mysql.ClassroomTableInstance.UpdateImageById(imgUrl, q.Id)
-	// if err != nil {
-	// 	utils.ErrorLogger.Errorf("error:%v", err)
-	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Upload image failed", "")
-	// 	c.JSON(http.StatusOK, ret)
-	// 	return
-	// }
-
 	ret := utils.JsonResponse(0, map[string]interface{}{"imgaeUrl": imgUrl}, "", "")
 	c.JSON(http.StatusOK, ret)
 }
@@ -262,14 +254,6 @@ func UpdateClassroomInfo(c *gin.Context) {
 		return
 	}
 
-	// classroomInfo, err := mysql.ClassroomTableInstance.GetClassroomInfoById(q.Id)
-	// if err != nil {
-	// 	utils.ErrorLogger.Errorf("error:%v", err)
-	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
-	// 	c.JSON(http.StatusOK, ret)
-	// 	return
-	// }
-
 	// 更新基本信息
 	var baseInfo UpdateClassroomInfoJson
 	if err := c.ShouldBind(&baseInfo); err != nil {
@@ -278,12 +262,6 @@ func UpdateClassroomInfo(c *gin.Context) {
 		c.JSON(http.StatusOK, ret)
 		return
 	}
-
-	// 将所需更新的非零值元素加入map
-	// err = utils.StructAddToMap(baseInfo, updateClassroomInfo)
-	// if err != nil {
-	// 	utils.ErrorLogger.Errorf("error: %v", err)
-	// }
 
 	var completeInfo model.DetailedClassroomInfo
 	completeInfo.Capacity = baseInfo.Capacity

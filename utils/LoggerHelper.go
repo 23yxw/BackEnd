@@ -44,8 +44,6 @@ func Loginit() {
 		return lvl >= zapcore.ErrorLevel
 	})
 	// 获取 info、error日志文件的io.Writer 抽象 getWriter() 在下方实现
-	// infoWriter := getWriter("./logs/info.log")
-	// errorWriter := getWriter("./logs/error.log")
 	infoWriter := getWriter(ParamsInstance.InfoLogPath)
 	errorWriter := getWriter(ParamsInstance.ErrorLogPath)
 	// 最后创建具体的Logger

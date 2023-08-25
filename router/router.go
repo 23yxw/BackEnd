@@ -1,7 +1,6 @@
 package router
 
 import (
-	// "bookingBackEnd/services"
 	"bookingBackEnd/controller"
 	"bookingBackEnd/utils"
 
@@ -53,7 +52,6 @@ func NewRouter() *gin.Engine {
 		booking.GET("/history", controller.GetBookingList)
 		// 根据条件获取教室信息，包括可预约时间段
 		booking.GET("/timeSegments", controller.GetBookingPeriodByClassroomId)
-		// booking.GET("/preferenceClassroom", controller.GetPreferenceClassroomAndBookingPeriod)
 	}
 
 	return router
