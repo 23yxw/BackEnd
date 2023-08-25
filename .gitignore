@@ -5,5 +5,4 @@ bin/**
 .vscode/
 **_test.go
 router/logs/
-images/
 logs/
