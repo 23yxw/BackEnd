@@ -7,18 +7,26 @@ import (
 	"os"
 )
 
-func GetDetailedClassroomList(pageNum int) (results []map[string]interface{}, err error) {
+func GetDetailedClassroomList(pageNum int, roomNameRule string) (results []map[string]interface{}, err error) {
 	var detailedClassroomList []model.DetailedClassroomInfo
-	err = mysql.ClassroomTableInstance.GetDetailedClassroomList(&detailedClassroomList, pageNum)
+	err = mysql.ClassroomTableInstance.GetDetailedClassroomList(&detailedClassroomList, pageNum, roomNameRule)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		return
 	}
 
+	results, err = GetClassroomData(detailedClassroomList)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		return
+	}
+	return
+}
+
+func GetClassroomData(detailedClassroomList []model.DetailedClassroomInfo) (results []map[string]interface{}, err error) {
 	results = make([]map[string]interface{}, len(detailedClassroomList))
 	for i, detailedClassroom := range detailedClassroomList {
 		imagePath := detailedClassroom.Photo
-		// imagePath := "/home/kihensarn/Booking/bookingBackEnd/images/3737366666393835383430643332346265663264656234383032396131366135.jpg"
 		// 检查文件是否存在
 		_, err = os.Stat(imagePath)
 		if os.IsNotExist(err) {
@@ -48,7 +56,7 @@ func GetDetailedClassroomList(pageNum int) (results []map[string]interface{}, er
 			return
 		}
 
-		detailedClassroomMap := utils.StructToMapWithJson(detailedClassroom.ClassroomInfo)
+		detailedClassroomMap := utils.StructToMapWithJson(detailedClassroom.CountClassroomInfo)
 		results[i] = make(map[string]interface{})
 		results[i]["classroomInfo"] = detailedClassroomMap
 		results[i]["imageData"] = buffer

@@ -8,14 +8,9 @@ type BaseInfo struct {
 	Power    int    `db:"power" json:"power"`
 }
 
-type UploadClassroomInfo struct {
-	Photo string `db:"photo" json:"photo"`
-	BaseInfo
-}
-
 type UpdateClassroomInfo struct {
 	Id int `db:"id" json:"id"`
-	UploadClassroomInfo
+	BaseInfo
 }
 
 type ClassroomInfo struct {
@@ -23,12 +18,17 @@ type ClassroomInfo struct {
 	BaseInfo
 }
 
-type DetailedClassroomInfo struct {
+type ClassroomAndPhotoInfo struct {
 	Photo string `db:"photo" json:"photo"`
 	ClassroomInfo
 }
 
-type ClassroomPowerStatics struct {
-	PowerCount   int `db:"powerCount" json:"powerCount"`
-	NoPowerCount int `db:"noPowerCount" json:"noPowerCount"`
+type CountClassroomInfo struct {
+	TotalCount int `db:"total_count" json:"total_count"`
+	ClassroomInfo
+}
+
+type DetailedClassroomInfo struct {
+	Photo string `db:"photo" json:"photo"`
+	CountClassroomInfo
 }

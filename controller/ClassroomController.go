@@ -19,6 +19,7 @@ type ClassroomInfoJson struct {
 	RoomName string `form:"roomName" binding:"required"`
 	Capacity int    `form:"capacity" binding:"required"`
 	Power    int    `form:"power" binding:"required"`
+	Photo    string `form:"photo" binding:"required"`
 }
 
 type UpdateClassroomInfoJson struct {
@@ -27,11 +28,13 @@ type UpdateClassroomInfoJson struct {
 	RoomName string `form:"roomName"`
 	Capacity int    `form:"capacity"`
 	Power    int    `form:"power"`
+	Photo    string `form:"photo"`
 }
 
 type ClassroomListValidateQuery struct {
 	ThirdSessionId string `form:"thirdSessionId" binding:"required"`
 	PageNum        int    `form:"pageNum"`
+	RoomNameRule   string `form:"roomNameRule"`
 }
 
 type SingleClassroomValidateQuery struct {
@@ -42,6 +45,43 @@ type SingleClassroomValidateQuery struct {
 type BookingStaticsValidateQuery struct {
 	ThirdSessionId string `form:"thirdSessionId" binding:"required"`
 	Date           string `form:"date" binding:"required"`
+}
+
+func UploadImage(c *gin.Context) {
+	thirdSession, exists := c.GetQuery("thirdSessionId")
+	if !exists {
+		utils.ErrorLogger.Infof("error: no thirdSession param")
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "no thirdSession param", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(thirdSession)
+	if err != nil || userIdInfo.UserType != 1 {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permisssion denied", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	imgUrl, err := GetFilesByType("img", c)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get image", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	// err = mysql.ClassroomTableInstance.UpdateImageById(imgUrl, q.Id)
+	// if err != nil {
+	// 	utils.ErrorLogger.Errorf("error:%v", err)
+	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Upload image failed", "")
+	// 	c.JSON(http.StatusOK, ret)
+	// 	return
+	// }
+
+	ret := utils.JsonResponse(0, map[string]interface{}{"imgaeUrl": imgUrl}, "", "")
+	c.JSON(http.StatusOK, ret)
 }
 
 func UploadClassroomInfo(c *gin.Context) {
@@ -69,23 +109,15 @@ func UploadClassroomInfo(c *gin.Context) {
 		return
 	}
 
-	imgUrl, err := GetFilesByType("img", c)
-	if err != nil {
-		utils.ErrorLogger.Errorf("error:%v", err)
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "Upload image failed", "")
-		c.JSON(http.StatusOK, ret)
-		return
-	}
-
-	var completeInfo model.UploadClassroomInfo
-	completeInfo.Photo = imgUrl
+	var completeInfo model.DetailedClassroomInfo
 	completeInfo.Capacity = baseInfo.Capacity
 	completeInfo.Floor = baseInfo.Floor
 	completeInfo.Location = baseInfo.Location
 	completeInfo.RoomName = baseInfo.RoomName
 	completeInfo.Power = baseInfo.Power
+	completeInfo.Photo = baseInfo.Photo
 
-	err = mysql.ClassroomTableInstance.InsertClassroomInfo(completeInfo)
+	id, err := mysql.ClassroomTableInstance.InsertClassroomInfo(completeInfo)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to upload classroom", "")
@@ -93,36 +125,38 @@ func UploadClassroomInfo(c *gin.Context) {
 		return
 	}
 
-	ret := utils.JsonResponse(0, map[string]interface{}{}, "", "")
+	ret := utils.JsonResponse(0, map[string]interface{}{"id": id}, "", "")
 	c.JSON(http.StatusOK, ret)
 }
 
-// func GetClassroomInfo(c *gin.Context) {
-// classroomId, exists := c.GetQuery("classroomId")
-// if !exists {
-// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "classroomId not exists", "")
-// 	c.JSON(http.StatusOK, ret)
-// 	return
-// }
-// 	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(thirdSession)
-// 	if err != nil && userIdInfo.UserType != 1 {
-// 		utils.ErrorLogger.Errorf("error:%v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permisssion denied", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
+func GetClassroomInfo(c *gin.Context) {
+	var q SingleClassroomValidateQuery
+	if err := c.MustBindWith(&q, binding.Query); err != nil {
+		utils.ErrorLogger.Errorf("error is: %v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
 
-// 	classroomInfo, err := mysql.ClassroomTableInstance.GetClassroomInfoById(classroomId)
-// 	if err != nil {
-// 		utils.ErrorLogger.Errorf("error:%v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
-// 	classroomInfoMap := utils.StructToMapWithJson(classroomInfo)
-// 	ret := utils.JsonResponse(0, classroomInfoMap, "", "")
-// 	c.JSON(http.StatusOK, ret)
-// }
+	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(q.ThirdSessionId)
+	if err != nil || userIdInfo.UserType != 1 {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permisssion denied", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	classroomInfo, err := mysql.ClassroomTableInstance.GetClassroomInfoById(q.Id)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+	classroomInfoMap := utils.StructToMapWithJson(classroomInfo)
+	ret := utils.JsonResponse(0, classroomInfoMap, "", "")
+	c.JSON(http.StatusOK, ret)
+}
 
 func GetClassroomList(c *gin.Context) {
 	var q ClassroomListValidateQuery
@@ -141,8 +175,8 @@ func GetClassroomList(c *gin.Context) {
 		return
 	}
 
-	var classroomList []model.ClassroomInfo
-	err = mysql.ClassroomTableInstance.GetClassroomList(&classroomList, q.PageNum)
+	var classroomList []model.CountClassroomInfo
+	err = mysql.ClassroomTableInstance.GetClassroomList(&classroomList, q.PageNum, q.RoomNameRule)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
@@ -170,7 +204,7 @@ func GetDetailedClassroomList(c *gin.Context) {
 		return
 	}
 
-	results, err := services.GetDetailedClassroomList(q.PageNum)
+	results, err := services.GetDetailedClassroomList(q.PageNum, q.RoomNameRule)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get detailed classroom info", "")
@@ -228,16 +262,13 @@ func UpdateClassroomInfo(c *gin.Context) {
 		return
 	}
 
-	updateClassroomInfo := make(map[string]interface{})
-	updateClassroomInfo["id"] = q.Id
-
-	classroomInfo, err := mysql.ClassroomTableInstance.GetClassroomInfoById(q.Id)
-	if err != nil {
-		utils.ErrorLogger.Errorf("error:%v", err)
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
-		c.JSON(http.StatusOK, ret)
-		return
-	}
+	// classroomInfo, err := mysql.ClassroomTableInstance.GetClassroomInfoById(q.Id)
+	// if err != nil {
+	// 	utils.ErrorLogger.Errorf("error:%v", err)
+	// 	ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get classroom info", "")
+	// 	c.JSON(http.StatusOK, ret)
+	// 	return
+	// }
 
 	// 更新基本信息
 	var baseInfo UpdateClassroomInfoJson
@@ -249,27 +280,21 @@ func UpdateClassroomInfo(c *gin.Context) {
 	}
 
 	// 将所需更新的非零值元素加入map
-	err = utils.StructAddToMap(baseInfo, updateClassroomInfo)
-	if err != nil {
-		utils.ErrorLogger.Errorf("error: %v", err)
-	}
+	// err = utils.StructAddToMap(baseInfo, updateClassroomInfo)
+	// if err != nil {
+	// 	utils.ErrorLogger.Errorf("error: %v", err)
+	// }
 
-	// 更新照片
-	imgUrl, err := GetFilesByType("img", c)
-	if err != nil {
-		// 前端上传了图像，但是本地保存图像失败
-		if imgUrl != "" {
-			utils.ErrorLogger.Errorf("error:%v", err)
-			ret := utils.JsonResponse(1, map[string]interface{}{}, "Update image failed", "")
-			c.JSON(http.StatusOK, ret)
-			return
-		}
-	} else {
-		os.Remove(classroomInfo.Photo)
-		updateClassroomInfo["photo"] = imgUrl
-	}
+	var completeInfo model.DetailedClassroomInfo
+	completeInfo.Capacity = baseInfo.Capacity
+	completeInfo.Floor = baseInfo.Floor
+	completeInfo.Location = baseInfo.Location
+	completeInfo.RoomName = baseInfo.RoomName
+	completeInfo.Power = baseInfo.Power
+	completeInfo.Photo = baseInfo.Photo
+	completeInfo.Id = q.Id
 
-	err = mysql.ClassroomTableInstance.UpdateClassroomInfoById(updateClassroomInfo)
+	err = mysql.ClassroomTableInstance.UpdateClassroomInfoById(completeInfo)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to update classroom", "")
@@ -280,45 +305,50 @@ func UpdateClassroomInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, ret)
 }
 
-// func GetClassroomStatics(c *gin.Context) {
-// 	var q BookingStaticsValidateQuery
-// 	if err := c.ShouldBind(&q); err != nil {
-// 		utils.ErrorLogger.Errorf("error is: %v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
+func GetClassroomStatics(c *gin.Context) {
+	var q BookingStaticsValidateQuery
+	if err := c.ShouldBind(&q); err != nil {
+		utils.ErrorLogger.Errorf("error is: %v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
 
-// 	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(q.ThirdSessionId)
-// 	if err != nil || userIdInfo.UserType != 1 {
-// 		utils.ErrorLogger.Errorf("error:%v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permisssion denied", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
+	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(q.ThirdSessionId)
+	if err != nil || userIdInfo.UserType != 1 {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permisssion denied", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
 
-// 	powerStatics, err := mysql.ClassroomTableInstance.GetClassroomPowerStatics()
-// 	if err != nil {
-// 		utils.ErrorLogger.Errorf("error:%v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get power statics", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
-// 	powerStaticsMap :=
+	powerStatics, err := mysql.BookingTableInstance.GetPowerStatics(q.Date)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get power statics", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+	powerStaticsMap := utils.StructToMapWithJson(powerStatics)
 
-// 	bookingStatics, err := mysql.BookingTableInstance.GetBookingStaticsPerFloor(q.Date)
-// 	if err != nil {
-// 		utils.ErrorLogger.Errorf("error:%v", err)
-// 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get booking statics per floor", "")
-// 		c.JSON(http.StatusOK, ret)
-// 		return
-// 	}
-// 	bookingStaticsMap := utils.StructArrayToMapWithJson(bookingStatics)
+	floorStatics, err := mysql.BookingTableInstance.GetBookingStaticsPerFloor(q.Date)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get booking statics per floor", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+	floorStaticsMap := make([]map[string]interface{}, len(floorStatics))
+	for i, v := range floorStatics {
+		floorStaticsMap[i] = utils.StructToMapWithJson(v)
+	}
 
-// 	classroomInfoMap := utils.StructToMapWithJson(classroomInfo)
-// 	ret := utils.JsonResponse(0, classroomInfoMap, "", "")
-// 	c.JSON(http.StatusOK, ret)
-// }
+	results := map[string]interface{}{}
+	results["powerStatics"] = powerStaticsMap
+	results["floorStatics"] = floorStaticsMap
+	ret := utils.JsonResponse(0, results, "", "")
+	c.JSON(http.StatusOK, ret)
+}
 
 func GetFilesByType(fileType string, c *gin.Context) (FilePath string, err error) {
 	FileHeader, err := c.FormFile(fileType)

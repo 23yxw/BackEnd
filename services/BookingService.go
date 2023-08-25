@@ -5,12 +5,12 @@ import (
 	"bookingBackEnd/model"
 	"bookingBackEnd/utils"
 	"errors"
-	"fmt"
-	"strings"
+	// "fmt"
+	// "strings"
 	"time"
 )
 
-func InsertBookingInfo(thirdSession string, classroomId int, date string, startTime string, endTime string) (isConflict bool, err error) {
+func InsertBookingInfo(thirdSession string, classroomId int, date string, startTime string, endTime string) (isConflict bool, id int64, err error) {
 	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(thirdSession)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
@@ -34,7 +34,7 @@ func InsertBookingInfo(thirdSession string, classroomId int, date string, startT
 		return
 	}
 
-	err = mysql.BookingTableInstance.InsertBookingInfo(bookingInfo)
+	id, err = mysql.BookingTableInstance.InsertBookingInfo(bookingInfo)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		return
@@ -42,52 +42,70 @@ func InsertBookingInfo(thirdSession string, classroomId int, date string, startT
 	return
 }
 
-func FilterClassroomAndTimeSegments(filterClassroomInfo []model.ClassroomInfo, date string) (results []map[string]interface{}, err error) {
-	// 过滤出符合要求的教室
-	filterClassroomIds := make([]int, len(filterClassroomInfo))
-	for i, s := range filterClassroomInfo {
-		filterClassroomIds[i] = s.Id
-	}
+// func FilterClassroomAndTimeSegments(filterClassroomInfo []model.ClassroomInfo, date string) (results []map[string]interface{}, err error) {
+// 	// 过滤出符合要求的教室
+// 	filterClassroomIds := make([]int, len(filterClassroomInfo))
+// 	for i, s := range filterClassroomInfo {
+// 		filterClassroomIds[i] = s.Id
+// 	}
 
-	// 将整数数组转换为逗号分隔的字符串
-	stringArray := make([]string, len(filterClassroomIds))
-	for i, value := range filterClassroomIds {
-		stringArray[i] = fmt.Sprint(value)
-	}
-	filterClassroomIdString := strings.Join(stringArray, ",")
+// 	// 将整数数组转换为逗号分隔的字符串
+// 	stringArray := make([]string, len(filterClassroomIds))
+// 	for i, value := range filterClassroomIds {
+// 		stringArray[i] = fmt.Sprint(value)
+// 	}
+// 	filterClassroomIdString := strings.Join(stringArray, ",")
 
+// 	var bookingInfoList []model.AppointmentAndRoomId
+// 	err = mysql.BookingTableInstance.GetBookingPeriod(&bookingInfoList, filterClassroomIdString, date)
+// 	if err != nil {
+// 		utils.ErrorLogger.Errorf("error:%v", err)
+// 		return
+// 	}
+
+// 	// 使用map进行分组
+// 	groups := make(map[int][]model.AppointmentAndRoomId)
+// 	for _, id := range filterClassroomIds {
+// 		groups[id] = []model.AppointmentAndRoomId{}
+// 		for _, item := range bookingInfoList {
+// 			groups[item.RoomID] = append(groups[item.RoomID], item)
+// 		}
+// 	}
+
+// 	results = make([]map[string]interface{}, 0)
+// 	for roomId, bookingInfo := range groups {
+// 		var timeSegments []map[string]interface{}
+// 		timeSegments, err = getAvailableSlots(utils.ParamsInstance.StartTime, utils.ParamsInstance.EndTime, date, utils.ParamsInstance.MinTimeInterval, bookingInfo)
+// 		if err != nil {
+// 			utils.ErrorLogger.Errorf("error:%v", err)
+// 			return
+// 		}
+// 		result := make(map[string]interface{})
+// 		result["timeSegments"] = timeSegments
+// 		for _, s := range filterClassroomInfo {
+// 			if roomId == s.Id {
+// 				result["classroomInfo"] = s
+// 			}
+// 		}
+// 		results = append(results, result)
+// 	}
+// 	return
+// }
+
+func GetTimeSegments(room_id int, date string) (results []map[string]interface{}, err error) {
+	// 取出某教室的预约记录
 	var bookingInfoList []model.AppointmentAndRoomId
-	err = mysql.BookingTableInstance.GetBookingPeriod(&bookingInfoList, filterClassroomIdString, date)
+	err = mysql.BookingTableInstance.GetBookingPeriod(&bookingInfoList, room_id, date)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		return
 	}
 
-	// 使用map进行分组
-	groups := make(map[int][]model.AppointmentAndRoomId)
-	for _, id := range filterClassroomIds {
-		groups[id] = []model.AppointmentAndRoomId{}
-		for _, item := range bookingInfoList {
-			groups[item.RoomID] = append(groups[item.RoomID], item)
-		}
-	}
-
-	results = make([]map[string]interface{}, 0)
-	for roomId, bookingInfo := range groups {
-		var timeSegments []map[string]interface{}
-		timeSegments, err = getAvailableSlots(utils.ParamsInstance.StartTime, utils.ParamsInstance.EndTime, date, utils.ParamsInstance.MinTimeInterval, bookingInfo)
-		if err != nil {
-			utils.ErrorLogger.Errorf("error:%v", err)
-			return
-		}
-		result := make(map[string]interface{})
-		result["timeSegments"] = timeSegments
-		for _, s := range filterClassroomInfo {
-			if roomId == s.Id {
-				result["classroomInfo"] = s
-			}
-		}
-		results = append(results, result)
+	// 获取可预约的时间段信息
+	results, err = getAvailableSlots(utils.ParamsInstance.StartTime, utils.ParamsInstance.EndTime, date, utils.ParamsInstance.MinTimeInterval, bookingInfoList)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		return
 	}
 	return
 }

@@ -16,7 +16,7 @@ type UserPreferenceData struct {
 	RoomID       int    `form:"roomId" binding:"required"`
 }
 
-func UpsertUserPreference(c *gin.Context) {
+func InsertUserPreference(c *gin.Context) {
 	// 解析前端传递的数据
 	var data UserPreferenceData
 	if err := c.MustBindWith(&data, binding.Query); err != nil {
@@ -26,10 +26,18 @@ func UpsertUserPreference(c *gin.Context) {
 		return
 	}
 
-	err := services.InsertOrUpdateUserPreference(data.ThirdSession, data.RoomID)
+	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(data.ThirdSession)
 	if err != nil {
-		utils.ErrorLogger.Errorf("error is: %v", err)
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to insert or update user preference info", "")
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permission denied", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	err = mysql.UserPreferenceTableInstance.InsertUserPreference(userIdInfo.Id, data.RoomID)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to insert user preference info", "")
 		c.JSON(http.StatusOK, ret)
 		return
 	}
@@ -37,24 +45,45 @@ func UpsertUserPreference(c *gin.Context) {
 	c.JSON(http.StatusOK, ret)
 }
 
-func GetPreferenceClassroomAndBookingPeriod(c *gin.Context) {
-	thirdSession, exists := c.GetQuery("thirdSessionId")
-	if !exists {
-		utils.ErrorLogger.Infof("error: no thirdSession param")
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "no thirdSession param", "")
+func DeleteUserPreference(c *gin.Context) {
+	// 解析前端传递的数据
+	var data UserPreferenceData
+	if err := c.MustBindWith(&data, binding.Query); err != nil {
+		utils.ErrorLogger.Errorf("error is: %v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
 		c.JSON(http.StatusOK, ret)
 		return
 	}
 
-	date, exists := c.GetPostForm("date")
-	if !exists {
-		utils.ErrorLogger.Infof("error: no date param")
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "no date param", "")
+	userIdInfo, err := mysql.UserTableInstance.GetUserIdBythirdsession(data.ThirdSession)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Permission denied", "")
 		c.JSON(http.StatusOK, ret)
 		return
 	}
 
-	filterClassroomInfo, err := mysql.UserPreferenceTableInstance.GetPreferenceClassroomInfo(thirdSession)
+	err = mysql.UserPreferenceTableInstance.DeleteUserPreference(data.RoomID, userIdInfo.Id)
+	if err != nil {
+		utils.ErrorLogger.Errorf("error:%v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to delete user preference info", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+	ret := utils.JsonResponse(0, map[string]interface{}{}, "", "")
+	c.JSON(http.StatusOK, ret)
+}
+
+func GetPreferenceClassroom(c *gin.Context) {
+	var q FilterClassroomListValidateQuery
+	if err := c.MustBindWith(&q, binding.Query); err != nil {
+		utils.ErrorLogger.Errorf("error is: %v", err)
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have enough parameters", "")
+		c.JSON(http.StatusOK, ret)
+		return
+	}
+
+	filterClassroomInfo, err := mysql.UserPreferenceTableInstance.GetPreferenceClassroomInfo(q.ThirdSessionId, q.PageNum)
 	if err != nil || len(filterClassroomInfo) == 0 {
 		utils.ErrorLogger.Errorf("error:%v", err)
 		ret := utils.JsonResponse(1, map[string]interface{}{}, "Do not have preference classroom", "")
@@ -62,10 +91,10 @@ func GetPreferenceClassroomAndBookingPeriod(c *gin.Context) {
 		return
 	}
 
-	results, err := services.FilterClassroomAndTimeSegments(filterClassroomInfo, date)
+	results, err := services.GetClassroomData(filterClassroomInfo)
 	if err != nil {
 		utils.ErrorLogger.Errorf("error:%v", err)
-		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get desired classroom and time segments", "")
+		ret := utils.JsonResponse(1, map[string]interface{}{}, "Failed to get desired classroom info", "")
 		c.JSON(http.StatusOK, ret)
 		return
 	}

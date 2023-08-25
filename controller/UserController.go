@@ -60,7 +60,7 @@ func Register(c *gin.Context) {
 	results := make(map[string]interface{})
 	if len(ret) > 0 {
 		// 之前注册过
-		res := utils.JsonResponse(1, results, "You have already registered!", "")
+		res := utils.JsonResponse(2, results, "You have already registered!", "")
 		c.JSON(http.StatusOK, res)
 	} else {
 		thirdSession := strings.ReplaceAll(uuid.NewV4().String(), "-", "")
